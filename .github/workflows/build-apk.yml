@@ -2,72 +2,36 @@ name: Build AppMarket APK
 
 on:
 workflow_dispatch:
-push:
-branches:
-- main
-pull_request:
-branches:
-- main
-
-permissions:
-contents: read
 
 jobs:
-build-apk:
-name: Build Android Release APK
+build:
 runs-on: ubuntu-latest
 
 steps:
-  # 1. 检出源码
   - name: Checkout
     uses: actions/checkout@v4
 
-  # 2. 配置 JDK 21
-  - name: Set up JDK 21
+  - name: Setup JDK 21
     uses: actions/setup-java@v4
     with:
       distribution: temurin
       java-version: '21'
-      cache: gradle
 
-  # 3. 配置 Android SDK
-  - name: Set up Android SDK
+  - name: Setup Android SDK
     uses: android-actions/setup-android@v3
 
-  # 4. 安装项目需要的 Android SDK 37
   - name: Install Android SDK 37
-    run: |
-      sdkmanager "platforms;android-37" \
-                 "build-tools;37.0.0"
+    run: sdkmanager "platforms;android-37" "build-tools;37.0.0"
 
-  # 5. 给 Gradle Wrapper 添加执行权限
-  - name: Grant execute permission
-    run: chmod +x ./gradlew
+  - name: Make gradlew executable
+    run: chmod +x gradlew
 
-  # 6. 检查 Gradle 环境
-  - name: Check Gradle
-    run: ./gradlew --version
+  - name: Build Debug APK
+    run: ./gradlew :app:android:assembleDebug --stacktrace
 
-  # 7. 构建 Release APK
-  - name: Build Release APK
-    run: |
-      ./gradlew :app:android:assembleRelease \
-        --stacktrace \
-        --no-daemon
-
-  # 8. 查找生成的 APK
-  - name: Find APK
-    run: |
-      echo "=== APK files ==="
-      find . -type f -name "*.apk" -print
-
-  # 9. 上传 APK
   - name: Upload APK
     uses: actions/upload-artifact@v4
     with:
-      name: AppMarket-release
-      path: |
-        app/android/build/outputs/apk/release/*.apk
-        **/build/outputs/apk/release/*.apk
+      name: AppMarket-debug
+      path: '**/build/outputs/apk/debug/*.apk'
       if-no-files-found: error
-      retention-days: 30
