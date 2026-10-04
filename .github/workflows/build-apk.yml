@@ -1,4 +1,4 @@
-name: Build AppMarket APK
+name: Build AppMarket Debug APK
 
 on:
 workflow_dispatch:
@@ -8,7 +8,7 @@ build:
 runs-on: ubuntu-latest
 
 steps:
-  - name: Checkout
+  - name: Checkout source
     uses: actions/checkout@v4
 
   - name: Setup JDK 21
@@ -25,40 +25,22 @@ steps:
     run: |
       sdkmanager "platforms;android-37" "build-tools;37.0.0"
 
-  - name: Make gradlew executable
-    run: chmod +x gradlew
+  - name: Make Gradle executable
+    run: chmod +x ./gradlew
 
-  - name: Generate temporary signing key
+  - name: Build Debug APK
     run: |
-      keytool -genkeypair \
-        -v \
-        -keystore "$GITHUB_WORKSPACE/debug.keystore" \
-        -storepass android \
-        -keypass android \
-        -alias androiddebugkey \
-        -keyalg RSA \
-        -keysize 2048 \
-        -validity 10000 \
-        -dname "CN=Android Debug,O=Android,C=US"
+      ./gradlew :app:android:assembleDebug --stacktrace
 
-  - name: Build Release APK
+  - name: List APK files
     run: |
-      ./gradlew :app:android:assembleRelease \
-        -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/debug.keystore" \
-        -Pandroid.injected.signing.store.password=android \
-        -Pandroid.injected.signing.key.alias=androiddebugkey \
-        -Pandroid.injected.signing.key.password=android \
-        --stacktrace
-
-  - name: Find APK
-    run: |
-      echo "Generated APK:"
+      echo "=== APK files ==="
       find . -type f -name "*.apk" -print
 
-  - name: Upload APK
+  - name: Upload Debug APK
     uses: actions/upload-artifact@v4
     with:
-      name: AppMarket-release
-      path: "**/build/outputs/apk/release/*.apk"
+      name: AppMarket-debug
+      path: "**/build/outputs/apk/debug/*.apk"
       if-no-files-found: error
       retention-days: 30
